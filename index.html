@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Killer Bean Survivors</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      overflow: hidden;
+      background: #000;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    #game-container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+    
+    canvas {
+      display: block;
+    }
+    
+    /* UI Overlay */
+    #ui-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      color: white;
+    }
+    
+    /* Retículo */
+    #crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 20px;
+      height: 20px;
+    }
+    
+    #crosshair::before,
+    #crosshair::after {
+      content: '';
+      position: absolute;
+      background: rgba(255, 255, 255, 0.9);
+    }
+    
+    #crosshair::before {
+      width: 2px;
+      height: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    
+    #crosshair::after {
+      height: 2px;
+      width: 100%;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    
+    /* HUD Superior Esquerdo */
+    #hud-top-left {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+    }
+    
+    .stat-bar {
+      margin-bottom: 10px;
+    }
+    
+    .stat-label {
+      font-size: 14px;
+      color: #aaa;
+      margin-bottom: 4px;
+    }
+    
+    .bar-container {
+      width: 200px;
+      height: 20px;
+      background: rgba(0, 0, 0, 0.6);
+      border: 2px solid #444;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    
+    .bar-fill {
+      height: 100%;
+      transition: width 0.2s ease;
+    }
+    
+    #hp-bar .bar-fill {
+      background: linear-gradient(to bottom, #ff4444, #cc0000);
+    }
+    
+    #xp-bar .bar-fill {
+      background: linear-gradient(to bottom, #44ff44, #00cc00);
+    }
+    
+    .bar-text {
+      position: absolute;
+      width: 200px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: bold;
+      line-height: 20px;
+      text-shadow: 1px 1px 2px #000;
+    }
+    
+    /* Info arma */
+    #weapon-info {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      text-align: right;
+    }
+    
+    #weapon-name {
+      font-size: 24px;
+      font-weight: bold;
+      text-shadow: 2px 2px 4px #000;
+    }
+    
+    #weapon-hint {
+      font-size: 12px;
+      color: #888;
+    }
+    
+    /* Slow Motion Indicator */
+    #slowmo-indicator {
+      position: absolute;
+      top: 50%;
+      left: 20px;
+      transform: translateY(-50%);
+      font-size: 32px;
+      font-weight: bold;
+      color: #ff00ff;
+      text-shadow: 0 0 20px #ff00ff, 0 0 40px #ff00ff;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    
+    #slowmo-indicator.active {
+      opacity: 1;
+      animation: pulse 0.5s ease-in-out infinite alternate;
+    }
+    
+    @keyframes pulse {
+      from { transform: translateY(-50%) scale(1); }
+      to { transform: translateY(-50%) scale(1.1); }
+    }
+    
+    /* Level indicator */
+    #level-info {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      text-align: right;
+    }
+    
+    #level-number {
+      font-size: 48px;
+      font-weight: bold;
+      text-shadow: 2px 2px 4px #000;
+    }
+    
+    #level-label {
+      font-size: 14px;
+      color: #888;
+    }
+    
+    /* Upgrades List */
+    #upgrades-list {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      font-size: 12px;
+      color: #888;
+    }
+    
+    #upgrades-list h3 {
+      color: #fff;
+      margin-bottom: 5px;
+    }
+    
+    .upgrade-item {
+      margin-bottom: 2px;
+    }
+    
+    /* Upgrade Menu */
+    #upgrade-menu {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.9);
+      border: 3px solid #00ff00;
+      border-radius: 10px;
+      padding: 30px;
+      text-align: center;
+      display: none;
+      pointer-events: auto;
+    }
+    
+    #upgrade-menu h2 {
+      font-size: 28px;
+      margin-bottom: 20px;
+      color: #00ff00;
+      text-shadow: 0 0 10px #00ff00;
+    }
+    
+    .upgrade-options {
+      display: flex;
+      gap: 20px;
+    }
+    
+    .upgrade-option {
+      width: 180px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid #444;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .upgrade-option:hover {
+      background: rgba(0, 255, 0, 0.2);
+      border-color: #00ff00;
+      transform: scale(1.05);
+    }
+    
+    .upgrade-option h3 {
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+    
+    .upgrade-option p {
+      font-size: 12px;
+      color: #888;
+    }
+    
+    /* Start Screen */
+    #start-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      pointer-events: auto;
+    }
+    
+    #start-screen h1 {
+      font-size: 48px;
+      margin-bottom: 20px;
+      text-shadow: 0 0 20px #ff4400;
+      color: #ff4400;
+    }
+    
+    #start-screen p {
+      font-size: 18px;
+      color: #888;
+      margin-bottom: 10px;
+    }
+    
+    #start-screen .controls-hint {
+      margin-top: 30px;
+      font-size: 14px;
+      color: #666;
+      text-align: left;
+    }
+    
+    /* Hit markers */
+    .damage-number {
+      position: absolute;
+      font-size: 20px;
+      font-weight: bold;
+      color: #ffff00;
+      text-shadow: 2px 2px 4px #000;
+      pointer-events: none;
+      animation: floatUp 1s ease-out forwards;
+    }
+    
+    @keyframes floatUp {
+      from {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      to {
+        opacity: 0;
+        transform: translateY(-50px);
+      }
+    }
+    
+    /* Kill count */
+    #kill-count {
+      position: absolute;
+      top: 100px;
+      right: 20px;
+      font-size: 16px;
+      color: #ff4444;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <!-- UI Overlay -->
+    <div id="ui-overlay">
+      <!-- Crosshair -->
+      <div id="crosshair"></div>
+      
+      <!-- HUD Top Left - HP/XP -->
+      <div id="hud-top-left">
+        <div class="stat-bar" id="hp-bar">
+          <div class="stat-label">HP</div>
+          <div class="bar-container">
+            <div class="bar-fill" style="width: 100%"></div>
+            <div class="bar-text">100 / 100</div>
+          </div>
+        </div>
+        <div class="stat-bar" id="xp-bar">
+          <div class="stat-label">XP</div>
+          <div class="bar-container">
+            <div class="bar-fill" style="width: 0%"></div>
+            <div class="bar-text">0 / 100</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Level Info -->
+      <div id="level-info">
+        <div id="level-number">1</div>
+        <div id="level-label">LEVEL</div>
+      </div>
+      
+      <!-- Kill Count -->
+      <div id="kill-count">Kills: 0</div>
+      
+      <!-- Weapon Info -->
+      <div id="weapon-info">
+        <div id="weapon-name">🔫 DUAL PISTOLS</div>
+        <div id="weapon-hint">[1] Pistols | [2] Fists | Scroll</div>
+      </div>
+      
+      <!-- Slow Mo Indicator -->
+      <div id="slowmo-indicator">⚡ SLOW MO ⚡</div>
+      
+      <!-- Upgrades List -->
+      <div id="upgrades-list">
+        <h3>Upgrades</h3>
+        <div id="upgrades-content">None yet</div>
+      </div>
+      
+      <!-- Upgrade Menu (hidden by default) -->
+      <div id="upgrade-menu">
+        <h2>⬆️ LEVEL UP! ⬆️</h2>
+        <div class="upgrade-options" id="upgrade-options">
+          <!-- Options will be dynamically inserted -->
+        </div>
+      </div>
+      
+      <!-- Start Screen -->
+      <div id="start-screen">
+        <h1>🔥 KILLER BEAN SURVIVORS 🔥</h1>
+        <p>Clique para começar</p>
+        <div class="controls-hint">
+          <p>WASD - Mover</p>
+          <p>SHIFT - Correr</p>
+          <p>SPACE - Pular</p>
+          <p>MOUSE - Câmera</p>
+          <p>LMB - Atirar/Socar</p>
+          <p>RMB - Slow Motion</p>
+          <p>1/2 ou SCROLL - Trocar arma</p>
+          <p>R - Reiniciar</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
+
