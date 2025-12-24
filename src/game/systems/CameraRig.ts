@@ -4,16 +4,17 @@ import { Input } from './Input';
 import { Time } from './Time';
 
 /**
- * Sistema de câmera third-person estilo Killer Bean / Max Payne
- * - Câmera SEMPRE atrás do personagem
- * - Personagem sempre olhando para frente (de costas para câmera)
- * - Mouse controla câmera, personagem segue
+ * Câmera Third-Person - CONTROLES CORRETOS
+ * 
+ * Mouse direita = câmera gira para DIREITA
+ * Mouse cima = câmera olha para CIMA
+ * Câmera sempre ATRÁS do player
  */
 export class CameraRig {
   camera: THREE.PerspectiveCamera;
   
-  private yaw: number = 0; // Rotação horizontal
-  private pitch: number = 0.2; // Levemente olhando para baixo
+  private yaw: number = 0;
+  private pitch: number = 0.3;
   private currentDistance: number;
   private targetDistance: number;
   private baseFOV: number = 70;
@@ -41,17 +42,19 @@ export class CameraRig {
     this.targetPosition.copy(targetPos);
     this.currentPosition.copy(targetPos);
     this.yaw = 0;
-    this.pitch = 0.2;
+    this.pitch = 0.3;
     this.updateCamera();
   }
 
   update(targetPos: THREE.Vector3, isJumping: boolean = false, isDiving: boolean = false): void {
-    // Mouse controla a câmera
+    // ========== CONTROLES DO MOUSE ==========
+    // Mouse direita (+X) = yaw AUMENTA = gira para DIREITA
+    // Mouse cima (-Y) = pitch DIMINUI = olha para CIMA
     this.yaw += Input.mouseDeltaX;
-    this.pitch += Input.mouseDeltaY;
+    this.pitch -= Input.mouseDeltaY; // INVERTIDO para mouse natural
     
-    // Limitar pitch
-    this.pitch = Math.max(-0.8, Math.min(1.2, this.pitch));
+    // Limitar pitch (não deixar virar de cabeça pra baixo)
+    this.pitch = Math.max(0.1, Math.min(1.4, this.pitch));
 
     this.isDiving = isDiving;
 
@@ -93,18 +96,22 @@ export class CameraRig {
   }
 
   /**
-   * Direção horizontal para frente (para movimento do player)
+   * Direção FRENTE horizontal (para onde o player anda com W)
+   * Baseado no yaw da câmera
    */
   getForwardDirection(): THREE.Vector3 {
+    // Yaw 0 = olhando para +Z, então forward é +Z
+    // Quando yaw aumenta (gira direita), forward gira junto
     return new THREE.Vector3(
-      Math.sin(this.yaw),
+      -Math.sin(this.yaw),
       0,
-      Math.cos(this.yaw)
+      -Math.cos(this.yaw)
     ).normalize();
   }
 
   /**
-   * Direção para direita (perpendicular ao forward)
+   * Direção DIREITA (para strafe com D)
+   * Perpendicular ao forward, 90° horário
    */
   getRightDirection(): THREE.Vector3 {
     return new THREE.Vector3(
@@ -123,20 +130,22 @@ export class CameraRig {
   }
 
   private updateCamera(): void {
-    // Câmera orbita ao redor do player
-    // Pitch controla altura, yaw controla rotação horizontal
+    // Câmera orbita ATRÁS do player
+    // Pitch controla altura, Yaw controla rotação horizontal
+    
     const horizontalDist = this.currentDistance * Math.cos(this.pitch);
     const verticalOffset = this.currentDistance * Math.sin(this.pitch) + CONFIG.camera.height;
 
+    // Câmera fica na direção OPOSTA ao forward (atrás do player)
     const offset = new THREE.Vector3(
-      -Math.sin(this.yaw) * horizontalDist,
+      Math.sin(this.yaw) * horizontalDist,
       verticalOffset,
-      -Math.cos(this.yaw) * horizontalDist
+      Math.cos(this.yaw) * horizontalDist
     );
 
     this.camera.position.copy(this.currentPosition).add(offset);
     
-    // Olhar para o player (na altura do peito)
+    // Olhar para o player
     const lookTarget = this.currentPosition.clone();
     lookTarget.y += CONFIG.player.height * 0.5;
     

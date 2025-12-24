@@ -368,11 +368,11 @@ export class Player {
       return;
     }
 
-    // === ROTAÇÃO: Personagem SEMPRE segue a câmera ===
-    // O personagem está sempre de costas para a câmera
-    this.body.rotation.y = cameraRig.getYaw();
+    // === ROTAÇÃO: Personagem SEMPRE de costas para câmera ===
+    // body.rotation.y segue o yaw da câmera (+ PI para ficar de costas)
+    this.body.rotation.y = cameraRig.getYaw() + Math.PI;
 
-    // === MOVIMENTO WASD ===
+    // === MOVIMENTO WASD - CORRETO ===
     const input = Input.getMovementVector();
     const forward = cameraRig.getForwardDirection();
     const right = cameraRig.getRightDirection();
@@ -380,10 +380,11 @@ export class Player {
     this.isMoving = input.x !== 0 || input.z !== 0;
     
     if (this.isMoving) {
-      // W = frente, S = trás, A = esquerda, D = direita
+      // W (z=-1) = frente, S (z=+1) = trás
+      // A (x=-1) = esquerda, D (x=+1) = direita
       const moveDir = new THREE.Vector3();
-      moveDir.addScaledVector(forward, -input.z); // W/S
-      moveDir.addScaledVector(right, input.x);    // A/D
+      moveDir.addScaledVector(forward, -input.z); // W vai pra frente
+      moveDir.addScaledVector(right, input.x);    // D vai pra direita
       moveDir.normalize();
       
       let speed = this.moveSpeed;
